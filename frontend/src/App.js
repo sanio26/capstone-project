@@ -1,458 +1,464 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { CSVLink } from "react-csv";
 
 import {
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
+  CartesianGrid,
   ResponsiveContainer,
-  CartesianGrid
 } from "recharts";
 
 function App() {
-
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
-  const [subdistricts, setSubdistricts] = useState([]);
+  const [subDistricts, setSubDistricts] = useState([]);
   const [villages, setVillages] = useState([]);
-  const [search, setSearch] = useState("");
-  const [stats, setStats] = useState({});
 
+  const [selectedState, setSelectedState] =
+    useState("");
+
+  const [selectedDistrict, setSelectedDistrict] =
+    useState("");
+
+  const [
+    selectedSubDistrict,
+    setSelectedSubDistrict,
+  ] = useState("");
+
+  const [searchTerm, setSearchTerm] =
+    useState("");
+
+  // Fetch states
   useEffect(() => {
-
-    axios
-      .get("http://localhost:5000/api/states")
-      .then((res) => {
-        setStates(res.data);
-      });
-
-    axios
-      .get("http://localhost:5000/api/stats")
-      .then((res) => {
-        setStats(res.data);
-      });
-
+    fetchStates();
   }, []);
 
-  // Districts
-  const getDistricts =
-    async (stateId) => {
+  const fetchStates = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/api/states"
+      );
+      setStates(res.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
-    const res =
-      await axios.get(
+  // Fetch districts
+  const handleStateChange = async (e) => {
+    const stateId = e.target.value;
+
+    setSelectedState(stateId);
+    setDistricts([]);
+    setSubDistricts([]);
+    setVillages([]);
+
+    try {
+      const res = await axios.get(
         `http://localhost:5000/api/districts/${stateId}`
       );
 
-    setDistricts(
-      res.data
-    );
-
-    setSubdistricts([]);
-    setVillages([]);
+      setDistricts(res.data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  // Subdistricts
-  const getSubdistricts =
-    async (districtId) => {
+  // Fetch subdistricts
+  const handleDistrictChange =
+    async (e) => {
+      const districtId =
+        e.target.value;
 
-    const res =
-      await axios.get(
-        `http://localhost:5000/api/subdistricts/${districtId}`
+      setSelectedDistrict(
+        districtId
       );
 
-    setSubdistricts(
-      res.data
-    );
+      setSubDistricts([]);
+      setVillages([]);
 
-    setVillages([]);
-  };
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/api/subdistricts/${districtId}`
+        );
 
-  // Villages
-  const getVillages =
-    async (subdistrictId) => {
+        setSubDistricts(res.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
-    const res =
-      await axios.get(
-        `http://localhost:5000/api/villages/${subdistrictId}`
+  // Fetch villages
+  const handleSubDistrictChange =
+    async (e) => {
+      const subDistrictId =
+        e.target.value;
+
+      setSelectedSubDistrict(
+        subDistrictId
       );
 
-    setVillages(
-      res.data
-    );
-  };
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/api/villages/${subDistrictId}`
+        );
 
-  // Search village
-  const searchVillage =
-    async () => {
+        setVillages(res.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
-    const res =
-      await axios.get(
-        `http://localhost:5000/api/search?village=${search}`
-      );
-
-    setVillages(
-      res.data
-    );
-  };
-
-  // Chart data
-  const chartData = [
+  // Chart Data
+  const analyticsData = [
     {
       name: "States",
-      count:
-        stats.totalStates
+      count: states.length,
     },
     {
       name: "Districts",
-      count:
-        stats.totalDistricts
+      count: districts.length,
     },
     {
-      name:
-        "SubDistricts",
-      count:
-        stats
-        .totalSubDistricts
+      name: "SubDistricts",
+      count: subDistricts.length,
     },
     {
-      name:
-        "Villages",
-      count:
-        stats.totalVillages
-    }
+      name: "Villages",
+      count: villages.length,
+    },
   ];
 
+  const COLORS = [
+    "#2563eb",
+    "#16a34a",
+    "#ca8a04",
+    "#dc2626",
+  ];
+
+  const filteredVillages =
+    villages.filter((village) =>
+      village.village_name
+        ?.toLowerCase()
+        .includes(
+          searchTerm.toLowerCase()
+        )
+    );
+
   return (
+    <div
+      style={{
+        padding: "30px",
+        backgroundColor: "#f1f5f9",
+        minHeight: "100vh",
+      }}
+    >
+      <h1
+        style={{
+          textAlign: "center",
+          marginBottom: "30px",
+        }}
+      >
+        India Village Analytics Dashboard
+      </h1>
 
-    <div className="container mt-5">
-
-      <div className="card shadow p-4">
-
-        <h1 className="text-center mb-4">
-          🇮🇳 India Village Dashboard
-        </h1>
-
-        {/* Stats Cards */}
-        <div className="row mb-4">
-
-          <div className="col-md-3">
-            <div className="card text-center shadow-sm p-3">
-              <h3>
-                {stats.totalStates}
-              </h3>
-              <p>States</p>
-            </div>
-          </div>
-
-          <div className="col-md-3">
-            <div className="card text-center shadow-sm p-3">
-              <h3>
-                {
-                  stats
-                  .totalDistricts
-                }
-              </h3>
-              <p>
-                Districts
-              </p>
-            </div>
-          </div>
-
-          <div className="col-md-3">
-            <div className="card text-center shadow-sm p-3">
-              <h3>
-                {
-                  stats
-                  .totalSubDistricts
-                }
-              </h3>
-              <p>
-                SubDistricts
-              </p>
-            </div>
-          </div>
-
-          <div className="col-md-3">
-            <div className="card text-center shadow-sm p-3">
-              <h3>
-                {
-                  stats
-                  .totalVillages
-                }
-              </h3>
-              <p>
-                Villages
-              </p>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Analytics Chart */}
-        <div className="mb-5">
-
-          <h3 className="mb-3">
-            Analytics Overview
-          </h3>
-
-          <ResponsiveContainer
-            width="100%"
-            height={300}
+      {/* Analytics Cards */}
+      <div
+        style={{
+          display: "flex",
+          gap: "20px",
+          justifyContent: "center",
+          flexWrap: "wrap",
+          marginBottom: "30px",
+        }}
+      >
+        {[
+          {
+            title: "States",
+            count: states.length,
+            color: "#2563eb",
+          },
+          {
+            title: "Districts",
+            count: districts.length,
+            color: "#16a34a",
+          },
+          {
+            title:
+              "SubDistricts",
+            count:
+              subDistricts.length,
+            color:
+              "#ca8a04",
+          },
+          {
+            title:
+              "Villages",
+            count:
+              villages.length,
+            color:
+              "#dc2626",
+          },
+        ].map((item, index) => (
+          <div
+            key={index}
+            style={{
+              background:
+                item.color,
+              color:
+                "white",
+              padding:
+                "20px",
+              borderRadius:
+                "12px",
+              width:
+                "220px",
+              textAlign:
+                "center",
+            }}
           >
-
-            <BarChart
-              data={chartData}
-            >
-
-              <CartesianGrid />
-
-              <XAxis
-                dataKey="name"
-              />
-
-              <YAxis />
-
-              <Tooltip />
-
-              <Bar
-                dataKey="count"
-              />
-
-            </BarChart>
-
-          </ResponsiveContainer>
-
-        </div>
-
-        {/* Search */}
-        <div className="mb-4">
-
-          <h4>
-            Search Village
-          </h4>
-
-          <div className="d-flex gap-2">
-
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search village..."
-              value={search}
-
-              onChange={(e) =>
-                setSearch(
-                  e.target.value
-                )
-              }
-            />
-
-            <button
-              className="btn btn-primary"
-              onClick={
-                searchVillage
-              }
-            >
-              Search
-            </button>
-
+            <h2>{item.count}</h2>
+            <p>{item.title}</p>
           </div>
-
-        </div>
-
-        {/* Dropdowns */}
-        <div className="row">
-
-          <div className="col-md-4">
-
-            <h5>State</h5>
-
-            <select
-              className="form-select"
-
-              onChange={(e) =>
-                getDistricts(
-                  e.target.value
-                )
-              }
-            >
-
-              <option>
-                Select State
-              </option>
-
-              {states.map(
-                (state) => (
-
-                  <option
-                    key={state.id}
-                    value={state.id}
-                  >
-                    {
-                      state.state_name
-                    }
-                  </option>
-                )
-              )}
-
-            </select>
-
-          </div>
-
-          <div className="col-md-4">
-
-            <h5>District</h5>
-
-            <select
-              className="form-select"
-
-              onChange={(e) =>
-                getSubdistricts(
-                  e.target.value
-                )
-              }
-            >
-
-              <option>
-                Select District
-              </option>
-
-              {districts.map(
-                (district) => (
-
-                  <option
-                    key={
-                      district.id
-                    }
-
-                    value={
-                      district.id
-                    }
-                  >
-                    {
-                      district
-                      .district_name
-                    }
-                  </option>
-                )
-              )}
-
-            </select>
-
-          </div>
-
-          <div className="col-md-4">
-
-            <h5>
-              SubDistrict
-            </h5>
-
-            <select
-              className="form-select"
-
-              onChange={(e) =>
-                getVillages(
-                  e.target.value
-                )
-              }
-            >
-
-              <option>
-                Select
-                SubDistrict
-              </option>
-
-              {subdistricts.map(
-                (
-                  subdistrict
-                ) => (
-
-                  <option
-                    key={
-                      subdistrict.id
-                    }
-
-                    value={
-                      subdistrict.id
-                    }
-                  >
-                    {
-                      subdistrict
-                        .subdistrict_name
-                    }
-                  </option>
-                )
-              )}
-
-            </select>
-
-          </div>
-
-        </div>
-
-        {/* Villages */}
-        <div className="mt-5">
-
-          <h3>
-            Villages Found:
-            {" "}
-            {
-              villages.length
-            }
-          </h3>
-
-          {villages.length ===
-            0 && (
-            <p>
-              Please select
-              State,
-              District,
-              and
-              SubDistrict
-            </p>
-          )}
-
-          <div className="row">
-
-            {villages.map(
-              (village) => (
-
-                <div
-                  className="col-md-4 mb-3"
-
-                  key={
-                    village.id
-                  }
-                >
-                  <div className="card p-3 shadow-sm village-card">
-
-                    <h5>
-                      {
-                        village
-                          .village_name
-                      }
-                    </h5>
-
-                    <small>
-                      Code:
-                      {" "}
-                      {village.code ||
-                        village.mdds_plcn ||
-                        "N/A"}
-                    </small>
-
-                  </div>
-                </div>
-              )
-            )}
-
-          </div>
-
-        </div>
-
+        ))}
       </div>
 
+      {/* Bar Chart */}
+      <ResponsiveContainer
+        width="100%"
+        height={300}
+      >
+        <BarChart
+          data={analyticsData}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="count" />
+        </BarChart>
+      </ResponsiveContainer>
+
+      {/* Pie Chart */}
+      <ResponsiveContainer
+        width="100%"
+        height={300}
+      >
+        <PieChart>
+          <Pie
+            data={analyticsData}
+            dataKey="count"
+            outerRadius={100}
+            label
+          >
+            {analyticsData.map(
+              (
+                entry,
+                index
+              ) => (
+                <Cell
+                  key={index}
+                  fill={
+                    COLORS[index]
+                  }
+                />
+              )
+            )}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+
+      {/* Dropdowns */}
+      <div
+        style={{
+          display: "flex",
+          gap: "20px",
+          marginBottom: "20px",
+        }}
+      >
+        <select
+          value={
+            selectedState
+          }
+          onChange={
+            handleStateChange
+          }
+        >
+          <option value="">
+            Select State
+          </option>
+
+          {states.map(
+            (state) => (
+              <option
+                key={
+                  state.id
+                }
+                value={
+                  state.id
+                }
+              >
+                {
+                  state.state_name
+                }
+              </option>
+            )
+          )}
+        </select>
+
+        <select
+          value={
+            selectedDistrict
+          }
+          onChange={
+            handleDistrictChange
+          }
+        >
+          <option value="">
+            Select District
+          </option>
+
+          {districts.map(
+            (
+              district
+            ) => (
+              <option
+                key={
+                  district.id
+                }
+                value={
+                  district.id
+                }
+              >
+                {
+                  district.district_name
+                }
+              </option>
+            )
+          )}
+        </select>
+
+        <select
+          value={
+            selectedSubDistrict
+          }
+          onChange={
+            handleSubDistrictChange
+          }
+        >
+          <option value="">
+            Select SubDistrict
+          </option>
+
+          {subDistricts.map(
+            (sub) => (
+              <option
+                key={
+                  sub.id
+                }
+                value={
+                  sub.id
+                }
+              >
+                {
+                  sub.subdistrict_name
+                }
+              </option>
+            )
+          )}
+        </select>
+      </div>
+
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search Village..."
+        value={searchTerm}
+        onChange={(e) =>
+          setSearchTerm(
+            e.target.value
+          )
+        }
+      />
+
+      <h2>
+        Villages Found:
+        {" "}
+        {filteredVillages.length}
+      </h2>
+
+      {/* Export CSV */}
+      <CSVLink
+        data={filteredVillages}
+        filename="villages.csv"
+        style={{
+          background:
+            "#16a34a",
+          color: "white",
+          padding:
+            "10px 20px",
+          textDecoration:
+            "none",
+          borderRadius:
+            "8px",
+          display:
+            "inline-block",
+          marginBottom:
+            "20px",
+        }}
+      >
+        Export Villages CSV
+      </CSVLink>
+
+      {/* Table */}
+      <table
+        border="1"
+        cellPadding="10"
+        width="100%"
+      >
+        <thead>
+          <tr>
+            <th>
+              Village ID
+            </th>
+            <th>
+              Village Name
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {filteredVillages.map(
+            (
+              village,
+              index
+            ) => (
+              <tr
+                key={index}
+              >
+                <td>
+                  {
+                    village.id
+                  }
+                </td>
+                <td>
+                  {
+                    village.village_name
+                  }
+                </td>
+              </tr>
+            )
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
